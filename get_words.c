@@ -2,13 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-//ssize_t getline(char **lineptr, size_t *n, FILE *stream);
 
 struct list {
-      char* data;
-      struct list* next;
+  char* data;
+  int count;
+  struct list* next;
 };
-
 
 struct tree {
       struct tree* left;
@@ -37,6 +36,7 @@ struct list* get_empty_item()
       out = (struct list*) malloc(sizeof(struct list));
       out->next=NULL;
       out->data=NULL;
+      out->count=0;
 
       return out;
 }
@@ -44,7 +44,7 @@ struct list* get_empty_item()
 void show(int level,struct list* root)
 {
       if (root->data) {
-            printf("%d: %s",level,root->data);
+	printf("%d: %s %d\n",level,root->data,root->count);
       }
 
       if (root->next) {
@@ -53,35 +53,46 @@ void show(int level,struct list* root)
       return;
 }
 
-void showT(int indent,struct tree* root)
+// adds an item at the end of the list.
+// The data are taken from the leaf
+void add2list(struct list* head,struct tree* leaf)
 {
+  // first element of a list
+  if (!head->data) {
+    head->data=leaf->data;
+    head->count=leaf->count;
+    return;
+  }
+  
+  while (head && head->next)
+    head=head->next;
 
-      if (!root) {
-            printf("%d NULL\n",indent);
-            return;
-      }
-            
-      if (indent==0) {
-            if (root->data) {
-                  printf("%d: %s %d\n",indent,root->data,root->count);
-            }
-      }
+  // case of empty list
+  
+  head->next=get_empty_item();
+  head->next->count=leaf->count;
+  head->next->data=leaf->data;
 
-      if (root->left) {
-            printf("%d: %s %d\n",indent+1,root->left->data,root->left->count);
-      }
-
-      if (root->right) {
-            printf("%d: %s %d\n",indent+1,root->right->data,root->right->count);
-      }
-
-      showT(indent+1,root->left);
-      showT(indent+1,root->right);
-      
-      return;
-
+  return;
 }
 
+void showW(int indent,struct tree* root,struct list* list_head)
+{
+  if (!root)
+    return;
+  
+  if (root->left) {
+    showW(indent+1,root->left,list_head);
+  }
+
+  if (root->data) {
+    printf("%d: %s %d\n",indent,root->data,root->count);
+    add2list(list_head,root);
+  }
+  showW(indent+1,root->right,list_head);
+
+  return;
+}
 
 void add_word2tree(char* word,struct tree* root)
 {
@@ -126,7 +137,7 @@ void add_word2tree(char* word,struct tree* root)
       
 }
 
-
+// simple chack for alphabet characters
 int is_ok(char inp)
 {
       if ((inp >='A' && inp <='Z') || (inp >='a' && inp <='z'))
@@ -135,7 +146,7 @@ int is_ok(char inp)
 }
 
 
-
+// catch regular characters and UTF8 pilish diacritics
 int is_ok2(unsigned char* inp)
 {
       if ((*inp >='A' && *inp <='Z') || (*inp >='a' && *inp <='z'))
@@ -196,7 +207,8 @@ int is_ok2(unsigned char* inp)
       return 0;
 }
 
-
+// takes the string and fills the tree with
+// words from this string
 void extract_words(char* string,struct tree* root)
 {
       char* word;
@@ -234,6 +246,8 @@ void extract_words(char* string,struct tree* root)
       return;
 }
 
+// recursively parses a line from input
+// stream and fills the binary tree
 void eat_one_line(FILE* input,struct tree* root)
 {
       char *buf=NULL;
@@ -251,34 +265,6 @@ void eat_one_line(FILE* input,struct tree* root)
       return;
 }
 
-void add_one_line(FILE* input,struct list* root)
-{
-      char *buf=NULL;
-      int buflen=0;
-      int b_read=0;
-
-      b_read=getline(&buf,&buflen,input);
-      struct list* item=NULL;
-
-      if (b_read!=-1) {
-            fprintf(stderr,"newline %d\n",b_read);
-            if (!root->data) {
-                  root->data=buf;
-                  root->next=NULL;
-                  add_one_line(input,root);
-            } else {
-                  item=get_empty_item();
-                  item->data=buf;
-                  item->next=NULL;
-                  root->next=item;
-
-                  add_one_line(input,item);
-            }
-      } else {
-            return;
-      }
-}
-
 int main(int argc,char** argv)
 {
       FILE* input=NULL;
@@ -292,27 +278,37 @@ int main(int argc,char** argv)
       }
 
 
-      lroot=get_empty_item();
-      //      add_one_line(input,lroot);
 
-      show(0,lroot);
 
+      // debug stuff: a good practise is not to
+      // throw debug stuff away
+      /* add_word2tree("ala",dict); */
+      /* add_word2tree("ala",dict); */
+      /* add_word2tree("ma",dict); */
+      /* add_word2tree("kota",dict); */
+      /* add_word2tree("a",dict); */
+      /* add_word2tree("nawet",dict); */
+      /* add_word2tree("dwa",dict); */
+      /* extract_words("Tomek kupił dwie lokomotywy",dict); */
+
+
+      // create dict (btree) and fill it with file content
       dict=get_empty_leaf();
+      eat_one_line(input,dict); 
 
-      add_word2tree("ala",dict);
-      add_word2tree("ala",dict);
-      add_word2tree("ma",dict);
-      add_word2tree("kota",dict);
-      add_word2tree("a",dict);
-      add_word2tree("nawet",dict);
-      add_word2tree("dwa",dict);
+      // create list and fill the list (and show the tree)
+      // BFS (show iplicitely fills lroot tree)
+      //
+      // showW could be named tree2list, provided the
+      // printf there would be commented out.
+      //
+      // 
+      lroot=get_empty_item();
+      showW(0,dict,lroot);
 
-      extract_words("Tomek kupił dwie lokomotywy",dict);
-
-      eat_one_line(input,dict);
-      
-      showT(0,dict);
-
+      // (show the list)
+      printf("================\n");
+      show(0,lroot);
 
       
 }
