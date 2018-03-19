@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-import pandas
+import pandas as pd
 
 
 def divide(word):
@@ -38,17 +38,35 @@ the_file=sys.argv[1];
 
 # create the dictionary from a file
 dictionary=dict();
+pwords=dict();
+old_w=""
+new_w=""
 with open(the_file) as f:
     for the_line in f:
         for w in the_line.split():
             w=w.lower()
             w=''.join(filter(lambda c:c.isalpha(),w))
+
             if (not w in dictionary):
                 dictionary.update({w:1})
             else :
                 tmp_count=dictionary[w];
                 dictionary.update({w:tmp_count+1})
+
+            if w=="the" or w=="a":
+                continue
                 
+            old_w=new_w
+            new_w=w
+            the_key=(old_w,new_w)
+
+            if (old_w and new_w):
+                if (not the_key in pwords):
+                    pwords.update({the_key:1})
+                else:
+                    tmp_count=pwords[the_key];
+                    pwords.update({the_key:tmp_count+1})
+                    
 print(dictionary)
 
 # 
@@ -70,7 +88,7 @@ by_occurence=([(k, dictionary[k]) for k in sorted(dictionary, key=dictionary.get
 #
 # 
 sorted_pairs_of_letters=([(k, pairs_of_letters[k]) for k in sorted(pairs_of_letters, key=pairs_of_letters.get, reverse=True)])
-
+sorted_w_pairs=([(k, pwords[k]) for k in sorted(pwords, key=pwords.get, reverse=True)])
 
 print("50 More common words")
 print(by_occurence[1:50])
@@ -80,5 +98,13 @@ print(sorted_pairs_of_letters)
 
 i_pair=list(filter(lambda x:x[0][0]=='i',sorted_pairs_of_letters))
 print(i_pair)
+print()
+print(sorted_w_pairs[1:50])
 
+
+### output for pandas:
+col1=list(map(lambda x:x[0],sorted_pairs_of_letters))
+col2=list(map(lambda x:x[1],sorted_pairs_of_letters))
+pd_letters=pd.DataFrame(data={'pair':col1,'freq':col2})
+pd_letters.to_csv("lpairs.csv");
 
